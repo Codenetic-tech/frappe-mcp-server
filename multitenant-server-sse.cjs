@@ -2,7 +2,7 @@
 
 /**
  * Multi-Tenant MCP Server with SSE Support
- * Creates MCP server instances using @modelcontextprotocol/sdk
+ * Handles multiple Frappe sites from a single process with SSE transport
  */
 
 const express = require('express');
@@ -34,13 +34,13 @@ function loadSitesConfig() {
 let sitesConfig = loadSitesConfig();
 setInterval(() => {
     sitesConfig = loadSitesConfig();
-}, 30000);
+}, 30000); // Reload every 30 seconds
 
 const app = express();
 app.use(express.json());
 
-// Import components
-let mcpLibrary, Server, StreamableHTTPServerTransport, ListToolsRequestSchema, CallToolRequestSchema;
+// Import frappe-mcp-server library
+let mcpLibrary;
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -58,8 +58,9 @@ app.get('/sites', (req, res) => {
     res.json({ sites });
 });
 
-// Main MCP endpoint with SSE support
+// SSE endpoint for MCP protocol
 app.post(['/mcp', '/mcp/:siteName'], async (req, res) => {
+    // Get site name from URL param, header, or body
     const siteName = req.params.siteName || req.headers['x-frappe-site-name'] || req.body.siteName;
 
     if (!siteName) {
@@ -90,60 +91,75 @@ app.post(['/mcp', '/mcp/:siteName'], async (req, res) => {
     console.log(`Processing MCP request for site: ${siteName}`);
 
     try {
-        // Create site-specific credentials
-        const credentials = {
-            url: siteConfig.url,
-            api_key: siteConfig.api_key,
-            api_secret: siteConfig.api_secret
-        };
+        const mcpRequest = req.body;
 
-        // Create MCP server instance
-        const server = new Server(
-            { name: 'frappe-mcp-server', version: '0.2.16' },
-            { capabilities: { tools: {} } }
-        );
+        // Handle initialize
+        if (mcpRequest.method === 'initialize') {
+            return res.json({
+                jsonrpc: '2.0',
+                result: {
+                    protocolVersion: '2024-11-05',
+                    capabilities: {
+                        tools: {}
+                    },
+                    serverInfo: {
+                        name: 'frappe-mcp-server',
+                        version: '0.2.16'
+                    }
+                },
+                id: mcpRequest.id
+            });
+        }
 
-        // Handle list tools
-        server.setRequestHandler(ListToolsRequestSchema, async () => {
+        // Handle tools/list
+        if (mcpRequest.method === 'tools/list') {
             const tools = mcpLibrary.listTools();
-            return { tools };
-        });
+            return res.json({
+                jsonrpc: '2.0',
+                result: { tools },
+                id: mcpRequest.id
+            });
+        }
 
-        // Handle tool calls
-        server.setRequestHandler(CallToolRequestSchema, async (request) => {
-            const { name, arguments: args } = request.params;
-            return await mcpLibrary.executeTool(name, args, credentials);
-        });
+        // Handle tools/call
+        if (mcpRequest.method === 'tools/call') {
+            const { name, arguments: args } = mcpRequest.params;
 
-        // Create transport
-        const transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: undefined,
-            enableJsonResponse: true
-        });
+            // Execute tool with site-specific credentials
+            const result = await mcpLibrary.executeTool(name, args, {
+                url: siteConfig.url,
+                api_key: siteConfig.api_key,
+                api_secret: siteConfig.api_secret
+            });
 
-        // Handle cleanup
-        res.on('close', () => {
-            transport.close();
-            server.close();
-        });
+            return res.json({
+                jsonrpc: '2.0',
+                result: result,
+                id: mcpRequest.id
+            });
+        }
 
-        // Connect and handle request
-        await server.connect(transport);
-        await transport.handleRequest(req, res, req.body);
+        // Unknown method
+        return res.status(400).json({
+            jsonrpc: '2.0',
+            error: {
+                code: -32601,
+                message: `Unknown method: ${mcpRequest.method}`
+            },
+            id: mcpRequest.id
+        });
 
     } catch (error) {
         console.error(`Error processing MCP request:`, error);
-        if (!res.headersSent) {
-            res.status(500).json({
-                jsonrpc: '2.0',
-                error: {
-                    code: -32603,
-                    message: error.message || 'Internal server error',
-                    data: error.stack
-                },
-                id: req.body.id || null
-            });
-        }
+        return res.status(500).json({
+            jsonrpc: '2.0',
+            error: {
+                code: -32603,
+                message: error.message || 'Internal server error',
+                data: error.stack
+            },
+            id: req.body.id || null
+        });
     }
 });
 
@@ -152,18 +168,7 @@ async function startServer() {
     try {
         console.log('Loading frappe-mcp-server library...');
         mcpLibrary = await import('./build/library.js');
-
-        // Import MCP SDK components
-        const sdkServer = await import('@modelcontextprotocol/sdk/server/index.js');
-        const sdkStreamable = await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
-        const sdkTypes = await import('@modelcontextprotocol/sdk/types.js');
-
-        Server = sdkServer.Server;
-        StreamableHTTPServerTransport = sdkStreamable.StreamableHTTPServerTransport;
-        ListToolsRequestSchema = sdkTypes.ListToolsRequestSchema;
-        CallToolRequestSchema = sdkTypes.CallToolRequestSchema;
-
-        console.log('Successfully loaded frappe-mcp-server library with SSE support');
+        console.log('Successfully loaded frappe-mcp-server library');
 
         const server = app.listen(MCP_PORT, '127.0.0.1', () => {
             console.log(`Multi-Tenant MCP Server listening on http://127.0.0.1:${MCP_PORT}`);
