@@ -11,6 +11,8 @@ import { DOCUMENT_TOOLS } from './document-operations.js';
 import { SCHEMA_TOOLS } from './schema-operations.js';
 import { HELPER_TOOLS } from './frappe-instructions.js';
 import { BLUEPRINT_TOOLS } from './blueprint-operations.js';
+import { DOCTYPE_OPERATIONS_TOOLS } from './doctype-operations.js';
+import { WORKFLOW_TOOLS } from './workflow-operations.js';
 
 export interface SiteCredentials {
   url: string;
@@ -43,6 +45,8 @@ export function listTools() {
     ...SCHEMA_TOOLS,
     ...HELPER_TOOLS,
     ...BLUEPRINT_TOOLS,
+    ...DOCTYPE_OPERATIONS_TOOLS,
+    ...WORKFLOW_TOOLS,
     {
       name: "ping",
       description: "A simple tool to check if the server is responding.",
@@ -328,6 +332,96 @@ export async function executeTool(
       content: [{
         type: "text",
         text: JSON.stringify({ count: result }, null, 2)
+      }],
+      isError: false
+    };
+  }
+
+  // Handle DocType operations
+  if (toolName === "create_doctype") {
+    const result = await docApi.callMethod(
+      client,
+      "sentra_core.builder.tools.data_tools.create_doctype_util",
+      {
+        name: args.name,
+        fields: args.fields,
+        module: args.module || "Sentra Core",
+        naming_rule: args.naming_rule || "By fieldname",
+        autoname: args.autoname
+      }
+    );
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify(result, null, 2)
+      }],
+      isError: false
+    };
+  }
+
+  if (toolName === "create_child_table") {
+    const result = await docApi.callMethod(
+      client,
+      "sentra_core.builder.tools.data_tools.create_child_table_util",
+      {
+        name: args.name,
+        fields: args.fields,
+        module: args.module || "Sentra Core"
+      }
+    );
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify(result, null, 2)
+      }],
+      isError: false
+    };
+  }
+
+  if (toolName === "add_fields_to_doctype") {
+    const result = await docApi.callMethod(
+      client,
+      "sentra_core.builder.tools.data_tools.add_fields_to_doctype_util",
+      {
+        doctype_name: args.doctype_name,
+        fields: args.fields
+      }
+    );
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify(result, null, 2)
+      }],
+      isError: false
+    };
+  }
+
+  if (toolName === "delete_doctype") {
+    const result = await docApi.callMethod(
+      client,
+      "sentra_core.builder.tools.data_tools.delete_doctype",
+      {
+        doctype_name: args.doctype_name,
+        force: args.force || false
+      }
+    );
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify(result, null, 2)
+      }],
+      isError: false
+    };
+  }
+
+  // Handle workflow operations
+  if (["create_workflow", "update_workflow_state", "get_workflow_status", "list_workflow_states"].includes(toolName)) {
+    // These are handled via callMethod with appropriate backend methods
+    // For now, return a placeholder - will need proper implementation
+    return {
+      content: [{
+        type: "text",
+        text: `Workflow tool '${toolName}' called with args: ${JSON.stringify(args, null, 2)}`
       }],
       isError: false
     };
