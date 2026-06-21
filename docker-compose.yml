@@ -15,10 +15,10 @@ services:
       - MCP_PORT=4000
       - MCP_HOST=0.0.0.0
 
-      # Frappe instance credentials (Required for single-tenant mode)
-      - FRAPPE_URL=http://your-frappe-instance.com
-      - FRAPPE_API_KEY=your_api_key
-      - FRAPPE_API_SECRET=your_api_secret
+      # Frappe instance credentials (Only uncomment & configure if running in single-tenant mode)
+      # - FRAPPE_URL=http://your-frappe-instance.com
+      # - FRAPPE_API_KEY=your_api_key
+      # - FRAPPE_API_SECRET=your_api_secret
 
       # Multi-tenant config (Optional: if you want to also support static multi-tenant list)
       # - SITES_CONFIG_PATH=/app/mcp-sites.json

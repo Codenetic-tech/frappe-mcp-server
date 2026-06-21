@@ -8,7 +8,7 @@
 const express = require('express');
 const fs = require('fs');
 
-const SITES_CONFIG_PATH = process.env.SITES_CONFIG_PATH || '/home/SenaERP/bench/mcp-sites.json';
+const SITES_CONFIG_PATH = process.env.SITES_CONFIG_PATH || './mcp-sites.json';
 const MCP_PORT = parseInt(process.env.MCP_PORT || '4000', 10);
 
 // Load sites configuration
