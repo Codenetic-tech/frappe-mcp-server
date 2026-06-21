@@ -72,15 +72,16 @@ export class FrappeApiError extends Error {
   }
 }
 
-/**
- * Helper function to handle API errors
- */
 export function handleApiError(error: any, operation: string): never {
   if (error.isAxiosError) {
     throw FrappeApiError.fromAxiosError(error, operation);
   } else {
+    let message = (error as Error).message || 'Unknown error';
+    if (message.includes("Cannot read properties of undefined (reading 'data')")) {
+      message = "Network error - Failed to connect to the Frappe instance. Verify that the VM has internet access, can resolve the domain DNS, and is not blocked by a firewall.";
+    }
     throw new FrappeApiError(
-      `Error during ${operation}: ${(error as Error).message || 'Unknown error'}`,
+      `Error during ${operation}: ${message}`,
       undefined, // statusCode
       undefined, // endpoint
       error // Pass original error as details

@@ -347,3 +347,31 @@ The gateway extracts these query parameters on every request, connects to the sp
 
 ISC
 
+### Claude Desktop Configuration (Windows Setup)
+
+Since Claude Desktop runs on Windows and typically requires process spawning, the recommended way to connect to a remote SSE server is using the `mcp-remote` bridge tool. To avoid Windows command-line escaping bugs with the `&` character, credentials should be passed via HTTP headers instead of query parameters:
+
+1. Install `mcp-remote` globally:
+   ```bash
+   npm install -g mcp-remote
+   ```
+2. Open your Claude Desktop config file (`%APPDATA%\Claude\claude_desktop_config.json`) and configure the server:
+   ```json
+   "mcpServers": {
+     "frappe-mcp": {
+       "command": "mcp-remote",
+       "args": [
+         "http://<your-vm-ip>:4000/mcp",
+         "--allow-http", // Required if connecting over HTTP (non-localhost)
+         "--header",
+         "x-frappe-url: https://your-frappe-instance.com",
+         "--header",
+         "x-frappe-api-key: your_api_key",
+         "--header",
+         "x-frappe-api-secret: your_api_secret"
+       ]
+     }
+   }
+   ```
+3. Restart Claude Desktop.
+

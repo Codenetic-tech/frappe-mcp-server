@@ -9,12 +9,14 @@ services:
     restart: unless-stopped
     ports:
       - "4000:4000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       # General configuration
       - NODE_ENV=production
       - MCP_PORT=4000
       - MCP_HOST=0.0.0.0
-
       # Frappe instance credentials (Only uncomment & configure if running in single-tenant mode)
       # - FRAPPE_URL=http://your-frappe-instance.com
       # - FRAPPE_API_KEY=your_api_key
@@ -23,7 +25,7 @@ services:
       # Multi-tenant config (Optional: if you want to also support static multi-tenant list)
       # - SITES_CONFIG_PATH=/app/mcp-sites.json
 
-    # Run the SSE server which supports both dynamic credentials and multi-tenancy
+      # Run the SSE server which supports both dynamic credentials and multi-tenancy
     command: node multitenant-server-sse.cjs
     # volumes:
     #   - ./mcp-sites.json:/app/mcp-sites.json

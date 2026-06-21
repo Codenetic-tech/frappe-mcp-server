@@ -109,6 +109,11 @@ app.post(['/mcp', '/mcp/:siteName'], async (req, res) => {
     try {
         const mcpRequest = req.body;
 
+        // Handle notifications (JSON-RPC requests without an ID)
+        if (mcpRequest.id === undefined || mcpRequest.id === null) {
+            return res.status(200).json({ jsonrpc: '2.0' });
+        }
+
         // Handle initialize
         if (mcpRequest.method === 'initialize') {
             return res.json({
