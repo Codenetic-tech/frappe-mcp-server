@@ -126,8 +126,9 @@ async function main() {
     });
 
     const port = parseInt(process.env.MCP_PORT || '4000', 10);
-    const server = app.listen(port, '127.0.0.1', () => {
-        console.error(`Frappe MCP server listening on http://127.0.0.1:${port}`);
+    const host = process.env.MCP_HOST || '127.0.0.1';
+    const server = app.listen(port, host, () => {
+        console.error(`Frappe MCP server listening on http://${host}:${port}`);
     });
 
     process.on("SIGINT", () => {

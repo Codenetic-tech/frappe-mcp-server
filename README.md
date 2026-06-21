@@ -279,6 +279,46 @@ Each error includes:
 
 5. **Check Existence**: Use `check_document_exists` before updating or deleting to ensure the document exists.
 
+## Docker & Portainer Deployment
+
+You can build and deploy this MCP server using Docker and Docker Compose. This is especially useful for hosting the server in environments like Portainer.
+
+### Build and Run with Docker Compose
+
+1. **Configure credentials**: Open the `docker-compose.yml` file and set the correct values for your Frappe instance:
+   - `FRAPPE_URL`: Your Frappe instance URL (e.g., `https://my-frappe-site.com`).
+   - `FRAPPE_API_KEY`: Your Frappe API key.
+   - `FRAPPE_API_SECRET`: Your Frappe API secret.
+
+2. **Start the stack**:
+   ```bash
+   docker compose up -d --build
+   ```
+   This builds the image and starts the container listening on port `4000`.
+
+### Deploying on Portainer
+
+To deploy this codebase on Portainer as a Docker Compose stack:
+
+1. **Create a Stack**: Go to your Portainer dashboard > **Stacks** > **Add stack**.
+2. **Define the Stack**:
+   - Give it a name (e.g., `frappe-mcp-server`).
+   - Choose **Web editor** or **Repository** to define the stack.
+   - If using the **Web editor**, copy the contents of `docker-compose.yml` and paste them into the editor.
+3. **Configure Environment Variables**:
+   Instead of hardcoding credentials in the compose editor, you can add them as Environment Variables in Portainer:
+   - Name: `FRAPPE_URL`, Value: `https://your-frappe-instance.com`
+   - Name: `FRAPPE_API_KEY`, Value: `your_api_key`
+   - Name: `FRAPPE_API_SECRET`, Value: `your_api_secret`
+4. **Deploy**: Click **Deploy the stack**.
+
+### Testing the Deployment
+
+Once running, the container exposes an HTTP/SSE server on port `4000`. You can verify it is running by hitting the `/health` endpoint (if running in multi-tenant mode) or checking container logs.
+
+To configure your AI client (like Claude Desktop) to connect to the running container, use the HTTP/SSE transport configuration pointing to `http://<your-container-ip-or-host>:4000/mcp`.
+
 ## License
 
 ISC
+

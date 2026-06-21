@@ -165,8 +165,9 @@ async function startServer() {
 
         console.log('Successfully loaded frappe-mcp-server library with SSE support');
 
-        const server = app.listen(MCP_PORT, '127.0.0.1', () => {
-            console.log(`Multi-Tenant MCP Server listening on http://127.0.0.1:${MCP_PORT}`);
+        const MCP_HOST = process.env.MCP_HOST || '127.0.0.1';
+        const server = app.listen(MCP_PORT, MCP_HOST, () => {
+            console.log(`Multi-Tenant MCP Server listening on http://${MCP_HOST}:${MCP_PORT}`);
             console.log(`Sites config: ${SITES_CONFIG_PATH}`);
             console.log(`Configured sites: ${Object.keys(sitesConfig.sites || {}).length}`);
         });

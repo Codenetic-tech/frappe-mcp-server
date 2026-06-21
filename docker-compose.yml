@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  frappe-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: frappe-mcp-server
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      # General configuration
+      - NODE_ENV=production
+      - MCP_PORT=4000
+      - MCP_HOST=0.0.0.0
+
+      # Frappe instance credentials (Required for single-tenant mode)
+      - FRAPPE_URL=http://your-frappe-instance.com
+      - FRAPPE_API_KEY=your_api_key
+      - FRAPPE_API_SECRET=your_api_secret
+
+      # Multi-tenant config (Uncomment and configure if using multi-tenant mode instead)
+      # - SITES_CONFIG_PATH=/app/mcp-sites.json
+
+    # To run in multi-tenant mode, uncomment the command and volume block below:
+    # command: node multitenant-server-sse.cjs
+    # volumes:
+    #   - ./mcp-sites.json:/app/mcp-sites.json
