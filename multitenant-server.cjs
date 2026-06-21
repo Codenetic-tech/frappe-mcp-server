@@ -60,43 +60,53 @@ app.get('/sites', (req, res) => {
 
 // Main MCP endpoint with SSE support
 app.post(['/mcp', '/mcp/:siteName'], async (req, res) => {
-    const siteName = req.params.siteName || req.headers['x-frappe-site-name'] || req.body.siteName;
+    // Check for dynamic credentials in query parameters, headers, or body
+    const url = req.query.url || req.headers['x-frappe-url'] || req.body.url;
+    const api_key = req.query.api_key || req.headers['x-frappe-api-key'] || req.body.api_key;
+    const api_secret = req.query.api_secret || req.headers['x-frappe-api-secret'] || req.body.api_secret;
 
-    if (!siteName) {
-        return res.status(400).json({
-            jsonrpc: '2.0',
-            error: {
-                code: -32000,
-                message: 'Missing site name in URL, X-Frappe-Site-Name header, or siteName in body'
-            },
-            id: null
-        });
-    }
+    let credentials;
 
-    const siteConfig = sitesConfig.sites[siteName];
+    if (url && api_key && api_secret) {
+        credentials = { url, api_key, api_secret };
+        console.log(`Processing MCP request with dynamic credentials for URL: ${url}`);
+    } else {
+        const siteName = req.params.siteName || req.headers['x-frappe-site-name'] || req.body.siteName;
 
-    if (!siteConfig) {
-        console.error(`Site not found in config: ${siteName}`);
-        return res.status(404).json({
-            jsonrpc: '2.0',
-            error: {
-                code: -32001,
-                message: `Site not found: ${siteName}`
-            },
-            id: null
-        });
-    }
+        if (!siteName) {
+            return res.status(400).json({
+                jsonrpc: '2.0',
+                error: {
+                    code: -32000,
+                    message: 'Missing site credentials (url, api_key, api_secret) or site name in URL/headers/body'
+                },
+                id: null
+            });
+        }
 
-    console.log(`Processing MCP request for site: ${siteName}`);
+        const siteConfig = sitesConfig.sites[siteName];
 
-    try {
-        // Create site-specific credentials
-        const credentials = {
+        if (!siteConfig) {
+            console.error(`Site not found in config: ${siteName}`);
+            return res.status(404).json({
+                jsonrpc: '2.0',
+                error: {
+                    code: -32001,
+                    message: `Site not found: ${siteName}`
+                },
+                id: null
+            });
+        }
+
+        console.log(`Processing MCP request for site: ${siteName}`);
+        credentials = {
             url: siteConfig.url,
             api_key: siteConfig.api_key,
             api_secret: siteConfig.api_secret
         };
+    }
 
+    try {
         // Create MCP server instance
         const server = new Server(
             { name: 'frappe-mcp-server', version: '0.2.16' },

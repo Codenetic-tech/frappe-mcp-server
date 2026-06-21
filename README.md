@@ -314,9 +314,34 @@ To deploy this codebase on Portainer as a Docker Compose stack:
 
 ### Testing the Deployment
 
-Once running, the container exposes an HTTP/SSE server on port `4000`. You can verify it is running by hitting the `/health` endpoint (if running in multi-tenant mode) or checking container logs.
+Once running, the container exposes an HTTP/SSE server on port `4000`. You can verify it is running by hitting the `/health` endpoint or checking container logs.
 
 To configure your AI client (like Claude Desktop) to connect to the running container, use the HTTP/SSE transport configuration pointing to `http://<your-container-ip-or-host>:4000/mcp`.
+
+### Dynamic Credentials Gateway Mode
+
+If you deploy this server to the cloud, you can run it as a **Dynamic Credentials Gateway**. This allows different users to connect their own AI agents to their own Frappe sites through your single cloud deployment.
+
+#### Connection String Format
+
+Users configure their AI client (like Claude Desktop) by passing their target Frappe instance URL and credentials as query parameters in the connection URL:
+
+```json
+{
+  "mcpServers": {
+    "frappe-cloud": {
+      "url": "http://your-cloud-mcp-server.com/mcp?url=https://your-frappe-instance.com&api_key=your_api_key&api_secret=your_api_secret"
+    }
+  }
+}
+```
+
+The gateway extracts these query parameters on every request, connects to the specified Frappe instance, and runs the requested MCP tools.
+
+#### Configuration Steps
+1. Ensure the container command runs `node multitenant-server-sse.cjs` (this is the default in `docker-compose.yml`).
+2. Make sure the container port `4000` is exposed to the internet (or behind a reverse proxy like Nginx or Cloudflare Tunnels).
+3. Users only need to configure the connection URL with their credentials in their AI client.
 
 ## License
 

@@ -60,35 +60,51 @@ app.get('/sites', (req, res) => {
 
 // SSE endpoint for MCP protocol
 app.post(['/mcp', '/mcp/:siteName'], async (req, res) => {
-    // Get site name from URL param, header, or body
-    const siteName = req.params.siteName || req.headers['x-frappe-site-name'] || req.body.siteName;
+    // Check for dynamic credentials in query parameters, headers, or body
+    const url = req.query.url || req.headers['x-frappe-url'] || req.body.url;
+    const api_key = req.query.api_key || req.headers['x-frappe-api-key'] || req.body.api_key;
+    const api_secret = req.query.api_secret || req.headers['x-frappe-api-secret'] || req.body.api_secret;
 
-    if (!siteName) {
-        return res.status(400).json({
-            jsonrpc: '2.0',
-            error: {
-                code: -32000,
-                message: 'Missing site name in URL, X-Frappe-Site-Name header, or siteName in body'
-            },
-            id: null
-        });
+    let credentials;
+
+    if (url && api_key && api_secret) {
+        credentials = { url, api_key, api_secret };
+        console.log(`Processing MCP request with dynamic credentials for URL: ${url}`);
+    } else {
+        const siteName = req.params.siteName || req.headers['x-frappe-site-name'] || req.body.siteName;
+
+        if (!siteName) {
+            return res.status(400).json({
+                jsonrpc: '2.0',
+                error: {
+                    code: -32000,
+                    message: 'Missing site credentials (url, api_key, api_secret) or site name in URL/headers/body'
+                },
+                id: null
+            });
+        }
+
+        const siteConfig = sitesConfig.sites[siteName];
+
+        if (!siteConfig) {
+            console.error(`Site not found in config: ${siteName}`);
+            return res.status(404).json({
+                jsonrpc: '2.0',
+                error: {
+                    code: -32001,
+                    message: `Site not found: ${siteName}`
+                },
+                id: null
+            });
+        }
+
+        console.log(`Processing MCP request for site: ${siteName}`);
+        credentials = {
+            url: siteConfig.url,
+            api_key: siteConfig.api_key,
+            api_secret: siteConfig.api_secret
+        };
     }
-
-    const siteConfig = sitesConfig.sites[siteName];
-
-    if (!siteConfig) {
-        console.error(`Site not found in config: ${siteName}`);
-        return res.status(404).json({
-            jsonrpc: '2.0',
-            error: {
-                code: -32001,
-                message: `Site not found: ${siteName}`
-            },
-            id: null
-        });
-    }
-
-    console.log(`Processing MCP request for site: ${siteName}`);
 
     try {
         const mcpRequest = req.body;
@@ -126,11 +142,7 @@ app.post(['/mcp', '/mcp/:siteName'], async (req, res) => {
             const { name, arguments: args } = mcpRequest.params;
 
             // Execute tool with site-specific credentials
-            const result = await mcpLibrary.executeTool(name, args, {
-                url: siteConfig.url,
-                api_key: siteConfig.api_key,
-                api_secret: siteConfig.api_secret
-            });
+            const result = await mcpLibrary.executeTool(name, args, credentials);
 
             return res.json({
                 jsonrpc: '2.0',
